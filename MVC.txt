@@ -1,0 +1,165 @@
+#Include 'Protheus.ch'
+#Include 'FWMVCDef.ch'
+
+
+//Variáveis Estáticas
+Static cTitulo := "Cadastro de Produtos Para Material de Apoio"
+
+User Function OFATA051()
+Local aArea   := GetArea()
+Local oBrowse
+//Local cFunBkp := FunName()
+	
+	SetFunName("OFATA051")
+	
+	//Instânciando FWMBrowse - Somente com dicionário de dados
+	oBrowse := FWMBrowse():New()
+	
+	//Setando a tabela de cadastro de Autor/Interprete
+	oBrowse:SetAlias("ZA4")
+
+	//Setando a descrição da rotina
+	oBrowse:SetDescription(cTitulo)
+	
+	//Legendas
+	//oBrowse:AddLegend( "SBM->BM_PROORI == '1'", "GREEN",	"Original" )
+	//oBrowse:AddLegend( "SBM->BM_PROORI == '0'", "RED",	"Não Original" )
+	
+	//Ativa a Browse
+	oBrowse:Activate()
+	//SetFunName(cFunBkp)
+	RestArea(aArea)
+Return Nil
+
+//-------------------------------------------------------------------
+/*/{Protheus.doc} ModelDef
+Definição do modelo de Dados
+
+@author daniloteles
+
+@since 29/10/2019
+@version 1.0
+/*/
+//-------------------------------------------------------------------
+
+Static Function ModelDef()
+//Criação do objeto do modelo de dados
+Local oModel 	:= Nil
+Local oStZA4 	:= Nil	
+Local oStZA5 	:= Nil	
+	
+	//Criação da estrutura de dados utilizada na interface
+	oStZA4 := FWFormStruct(1, "ZA4")
+	oStZA5 := FWFormStruct(1, "ZA5")
+		
+	//oStZA4:SetProperty('ZA4_QTDE',  MODEL_FIELD_WHEN,   FwBuildFeature(MODEL_FIELD_WHEN,   {||U_fValid()}))
+	oStZA4:SetProperty('ZA4_CAMP', MODEL_FIELD_OBRIGAT, .T.)
+	oStZA4:SetProperty('ZA4_PROD', MODEL_FIELD_OBRIGAT, .T.)
+	oStZA4:SetProperty('ZA4_TIPO', MODEL_FIELD_OBRIGAT, .T.)
+	
+	//Instanciando o modelo, não é recomendado colocar nome da user function (por causa do u_), respeitando 10 caracteres
+	oModel := MPFormModel():New("OFATA51M") 
+	oModel:AddFields("FORMZA4",/*cOwner*/,oStZA4)
+	//oModel:AddGrid('FORMZA5','FORMZA4',oStZA5,/*bLinePre*/, /*bLinePost*/,/*bPre - Grid Inteiro*/,/*bPos - Grid Inteiro*/,/*bLoad - Carga do modelo manualmente*/)  //cOwner é para quem pertence
+	
+	oModel:AddGrid('FORMZA5','FORMZA4',oStZA5,{|oModel, nLine, cAction, cField| ValLinha(oModel, nLine, cAction, cField)})	
+	
+	//Setando a chave primária da rotina
+	oModel:SetRelation('FORMZA5', {{"ZA5_FILIAL", "FwXFilial('ZA5')"}, {"ZA5_CAMP", "ZA4_CAMP"}, {"ZA5_CODPRO", "ZA4_PROD"}}, ZA5->(IndexKey(1)))
+	oModel:GetModel('FORMZA5'):SetUniqueLine({"ZA5_ENVIO","ZA5_TIPO","ZA5_FAIDE","ZA5_FAIATE"})
+	oModel:SetPrimaryKey({})
+	
+	//Adicionando descrição ao modelo
+	oModel:SetDescription(cTitulo)
+	oModel:GetModel("FORMZA4"):SetDescription(cTitulo)
+	oModel:GetModel("FORMZA5"):SetDescription("Regras de Envio Variavel")
+		
+
+Return oModel
+
+
+Static Function LockUnlock()
+Local lLock := .T.
+
+	if Alltrim(M->ZA4_TIPO) == "" .OR. M->ZA4_TIPO == "V"
+		lLock := .F.
+	endif
+	
+Return (lLock)
+
+//-------------------------------------------------------------------
+/*/{Protheus.doc} ViewDef
+Definição do interface
+
+@author daniloteles
+
+@since 29/10/2019
+@version 1.0
+/*/
+//-------------------------------------------------------------------
+
+Static Function ViewDef()
+Local oModel := nil
+Local oStZA4 := Nil
+Local oStZA5 := Nil
+Local oView  := Nil
+	
+	//Criando do objeto do modelo de dados da Interface do Cadastro de Autor/Interprete
+	oModel := FWLoadModel("OFATA051")
+	
+	//Criação da estrutura de dados utilizada na interface do cadastro de Autor
+	oStZA4 := FWFormStruct(2, "ZA4")  //pode se usar um terceiro parâmetro para filtrar os campos exibidos { |cCampo| cCampo $ 'SBM_NOME|SBM_DTAFAL|'}
+	oStZA5 := FWFormStruct(2, "ZA5")
+	
+	//Criando a view que será o retorno da função e setando o modelo da rotina
+	oView := FWFormView():New()
+	oView:SetModel(oModel)
+	
+	//Atribuindo formulários para interface
+	oView:AddField("VIEW_ZA4", oStZA4, "FORMZA4")
+	oView:AddGrid('VIEW_ZA5',oStZA5,'FORMZA5')
+	
+	//Criando um container com nome tela com 100%
+	oView:CreateHorizontalBox("CABEC",40)
+	oView:CreateHorizontalBox('GRID',60)
+	
+	//Colocando título do formulário
+	oView:EnableTitleView('VIEW_ZA4', 'Dados do Grupo de Produtos' )  
+	oView:EnableTitleView('VIEW_ZA5','Faixas de Envio Variavel')
+	
+	//Força o fechamento da janela na confirmação
+	oView:SetCloseOnOk({||.T.})
+	
+	//O formulário da interface será colocado dentro do container
+	oView:SetOwnerView("VIEW_ZA4","CABEC")
+	oView:SetOwnerView("VIEW_ZA5","GRID")
+	
+	/*oStZA5:RemoveField('ZA5_FILIAL')*/
+	oStZA5:RemoveField('ZA5_CAMP')
+	oStZA5:RemoveField('ZA5_CODPRO')
+	
+		
+Return oView
+
+Static Function ValLinha(oModelGrid, nLinha, cAcao, cCampo)
+Local lRet := .T.
+Local oModel := oModelGrid:GetModel()
+Local nOperation := oModel:GetOperation()
+
+
+IF oModel:GetValue('FORMZA5','ZA5_TIPO' ) == "F" .AND. (cCampo == "ZA5_FAIDE" .OR. cCampo =="ZA5_FAIATE")
+	lRet := .F.	
+	MSGALERT("Quando se tratar do tipo F=Fixo, não será necessario informar a faixa!", "Alerta!" )
+endif
+
+Return lRet
+
+
+Static Function MenuDef()
+Local aRot := {}
+	
+	ADD OPTION aRot TITLE 'Visualizar' ACTION 'VIEWDEF.OFATA051' OPERATION MODEL_OPERATION_VIEW   ACCESS 0 //OPERATION 1
+	ADD OPTION aRot TITLE 'Incluir'    ACTION 'VIEWDEF.OFATA051' OPERATION MODEL_OPERATION_INSERT ACCESS 0 //OPERATION 3
+	ADD OPTION aRot TITLE 'Alterar'    ACTION 'VIEWDEF.OFATA051' OPERATION MODEL_OPERATION_UPDATE ACCESS 0 //OPERATION 4
+	ADD OPTION aRot TITLE 'Excluir'    ACTION 'VIEWDEF.OFATA051' OPERATION MODEL_OPERATION_DELETE ACCESS 0 //OPERATION 5
+Return aRot

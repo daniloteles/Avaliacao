@@ -1,0 +1,173 @@
+#include 'protheus.ch'
+#include 'parmtype.ch'
+#INCLUDE "TOTVS.CH"
+
+user function OAPI001(_cacao,_CFUNCAO,_adados,cbusca)
+Local _Cret :=""
+Private _curlAUT := "http://000.000.00.000/"
+Private _curlAPI := "http://000.000.00.000/api/"
+
+Private ctoken   := oapi1aut()
+
+_Cret :=oapi01D(_cacao,_adados,_CFUNCAO,cbusca)
+Return _Cret
+
+
+static function oapi1aut
+	Local oRestClient := FWRest():New(_curlAUT)
+	Local aHeader :={}
+	Local ctoken :=""
+	Private cHeadRet:=""//{}
+	Private oJson	
+	aadd(aHeader,'Content-Type: application/x-www-form-urlencoded')
+	
+	ctoken := ""
+	
+	return ctoken
+
+return ctoken
+
+
+static function oapi01c(_cacao,_adados,_cfuncao) 
+
+Local curl := _curlAPI+_cfuncao//"https://.com/api/"+_cfuncao
+local cget 			:= ''
+local cPostParms    :=""
+LOCAL NTIMEOUT		:= 200
+LOCAL AHEADSTR		:= {"Content-Type: application/x-www-form-urlencoded"} //Content-Type: application/x-www-form-urlencoded //CONTENT-TYPE: application/json
+LOCAL CHEADERGET	:=" "
+LOCAL CRET			:=" "
+LOCAL CRET1			:=" "
+LOCAL aHeadOut		:={}
+local aheader 		:={}
+local adados 		:={}
+Local cLOG			:= ''
+
+aHeadOut := _adados
+CRET1 := noacento(u_tostring(AHEADOUT))
+
+CRET :=HttpPost(cUrl,CRET1,cPostParms,nTimeOut,AHEADSTR,@cHeaderGet)
+
+return cheaderget
+
+
+static function oapi01d(_cacao,_adados,_cfuncao,cbusca) //sales-consultant
+
+Local cfuncao :=_cfuncao
+Local oRestClient1 := FWRest():New(_curlAPI+cfuncao)
+Local aHeader :={}
+Local aHeader1 :=_adados
+Local _lret := .F.
+Private oJson1	
+
+aadd(aHeader,'Content-Type: application/x-www-form-urlencoded')
+
+if !vazio(ctoken)	
+	aadd(aHeader,'Authorization: Bearer '+ctoken)
+	
+	cBody:=noacento(u_tostring(_adados))
+	
+	IF _cacao=="POST"
+		oRestClient:setPath("")
+		oRestClient:SetPostParams(cBody)
+		
+		_lret := oRestClient1:Post(aHeader)
+	elseif _cacao=="PUT"
+		aadd(_adados,aheader[1])
+		oRestClient:setPath("/"+cbusca)
+		_lret := oRestClient1:Put(aHeader,cBody)
+	
+	elseif _cacao=="GET"
+		oRestClient:setPath("")
+		oRestClient:setPath(cbusca)
+		_lret := oRestClient1:GET(aHeader)
+	elseif _cacao=="DELETE"
+		oRestClient:setPath("")
+		oRestClient:setPath("/"+cbusca)
+		_lret := oRestClient1:DELETE(aHeader)	
+	endif
+	_cerro  := oRestClient1:GetResult()
+	_cret 	:= oRestClient1:GetLastError()
+	
+	if !_lret .or. "422" $ substr(_cret,1,10)
+		_cret+=_cerro	
+	endif
+	
+	if len(alltrim(_cerro)) <3
+		_cret := "422 - Não encontrado" + _cret
+	endif
+
+endif
+
+return _cret
+
+user function oapi01e(_cacao,_cfuncao,cfile) //sales-consultant
+Local _Cret :=""
+Local cfuncao :=_cfuncao
+Local oRestClient1 
+Local aHeader :={}
+Local cFileName 
+Local cFileExt 
+Private _curlAUT := "https://"
+Private _curlAPI := "https://com/api/"
+Private ctoken   :=oapi1aut()
+oRestClient1 := FWRest():New(_curlAPI+cfuncao)
+
+
+aadd(aHeader,'Content-Type: multipart/form-data; boundary=----WebKitFormBoundary7MA4YWxkTrZu0gW')
+
+
+if !vazio(ctoken)	
+	
+	cFileContent := MemoRead(cfile)
+	SplitPath(cfile,,,@cFileName,@cFileExt)
+
+
+	cPostParams := '------WebKitFormBoundary7MA4YWxkTrZu0gW' + CRLF
+    cPostParams += 'Content-Disposition: form-data; name="file"; filename="' + cFile+ '"' + CRLF
+    cPostParams += 'Content-Type: text/csv' + CRLF
+    cPostParams += CRLF + cFileContent + CRLF
+    cPostParams += '------WebKitFormBoundary7MA4YWxkTrZu0gW--' + CRLF
+		
+	oRestClient:setPath("")
+	oRestClient:SetPostParams(cPostParams)
+		
+	_lret := oRestClient1:Post(aHeader)
+	
+	_cerro := oRestClient1:GetResult()
+	_cret :=oRestClient1:GetLastError()
+	if !_lret .and. "422" $ substr(_cret,1,10)
+		_cret+=_cerro	
+	endif
+
+endif
+
+return _cret
+
+static function oapi01a
+Local cfuncao :="test"
+Local oRestClient1 := FWRest():New(_curlAPI+cfuncao)
+Local aHeader1 :={}
+Private oJson1	
+
+ctoken :=u_oapi1aut()
+if !vazio(ctoken)
+	
+	aadd(aHeader1,'Authorization: Bearer '+ctoken)
+	
+	oRestClient1:setPath("")	
+	
+	If oRestClient1:Get(aHeader1)
+	
+		_cret := oRestClient1:GetResult()
+		fwJsonDeserialize(_cret, @oJson1)			
+		ConOut("GET", oRestClient1:GetResult())
+	Else
+		_cret:=oRestClient1:GetLastError()
+		ConOut("POST", oRestClient1:GetLastError())
+	EndIf
+		
+
+endif
+
+return
